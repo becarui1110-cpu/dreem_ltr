@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     });
   }
 
-  let durationMinutes = 720; // ⏱️ 12h par défaut
+  let durationMinutes = 360; // ⏱️ 6h par défaut
   try {
     const body = (await req.json()) as { duration?: number | string };
     if (body.duration) {
