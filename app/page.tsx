@@ -16,9 +16,9 @@ export default function Home() {
             <div className="h-8 w-8 rounded-full bg-emerald-400/90" />
             <div>
               <p className="text-sm uppercase tracking-wide text-slate-300">
-                MyCarAdvisor
+                Conseiller Droit du Travail
               </p>
-              <p className="text-base font-semibold">Agent IA Premium</p>
+              <p className="text-base font-semibold">Agent IA Expert</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-300">
@@ -37,9 +37,12 @@ export default function Home() {
         <section className="bg-slate-900/40 border border-slate-800 rounded-2xl min-h-[520px] flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
             <div>
-              <h1 className="text-lg font-semibold">Votre assistant premium</h1>
+              <h1 className="text-lg font-semibold">
+                Votre conseiller en droit du travail
+              </h1>
               <p className="text-sm text-slate-400">
-                Posez vos questions sur le véhicule, les coûts, les options…
+                Posez vos questions sur le contrat, le licenciement, les heures
+                sup, les certificats de travail, etc.
               </p>
             </div>
             <button
@@ -69,16 +72,19 @@ export default function Home() {
               Informations d’accès
             </h2>
             <p className="text-sm text-slate-400">
-              Vous utilisez un lien d’accès temporaire. Une fois expiré, il
-              faudra en demander un nouveau.
+              Vous utilisez un lien d’accès temporaire à votre conseiller en
+              droit du travail. Une fois expiré, il faudra en demander un
+              nouveau.
             </p>
             <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 space-y-1">
               <p className="text-xs uppercase tracking-wide text-slate-400">
                 Durée du lien
               </p>
-              <p className="text-base font-semibold text-slate-50">24 heures</p>
+              <p className="text-base font-semibold text-slate-50">
+                24 heures
+              </p>
               <p className="text-xs text-slate-500">
-                Le compte à rebours est géré côté serveur.
+                Le compte à rebours et la sécurité sont gérés côté serveur.
               </p>
             </div>
           </div>
@@ -89,11 +95,11 @@ export default function Home() {
             </h2>
             <p className="text-sm text-slate-400">
               Si le chat ne s’affiche pas ou si votre lien a expiré, retournez
-              sur <span className="text-slate-100">mycaradvisor.ch</span> pour
-              générer un nouvel accès.
+              sur le site principal pour générer un nouvel accès à votre
+              conseiller.
             </p>
             <a
-              href="https://mycaradvisor.ch"
+              href="https://votre-site-juridique.fr" // 👉 remplace par ton domaine
               className="inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-950 text-sm font-medium px-4 py-2 hover:bg-white/90 transition"
             >
               Retourner sur le site
@@ -102,10 +108,11 @@ export default function Home() {
 
           <div className="bg-gradient-to-r from-emerald-500/15 to-slate-900/0 border border-emerald-500/20 rounded-2xl p-4">
             <p className="text-xs uppercase tracking-wide text-emerald-200 mb-1">
-              Premium activé
+              Accès expert
             </p>
             <p className="text-sm text-slate-100">
-              Vous avez accès aux fonctionnalités avancées de l’agent.
+              Vous bénéficiez d’un accompagnement personnalisé et de réponses
+              structurées sur vos questions de droit du travail.
             </p>
           </div>
         </aside>
