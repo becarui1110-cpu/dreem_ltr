@@ -1,8 +1,14 @@
+// middleware.ts
 import { NextResponse } from "next/server";
 
 const SECRET = process.env.TOKEN_SECRET!;
-const ADMIN_CODE = "dreem2025";
+const ADMIN_CODE = process.env.ADMIN_CODE || "dreem2025"; // à mettre dans ton .env
 const encoder = new TextEncoder();
+
+// Routes spécifiques à ton app "conseiller du droit du travail"
+const EXPIRED_ROUTE = "/expired";               // ou "/acces-expire" si tu crées cette page
+const ADMIN_BASE_ROUTE = "/admin-panel";        // ex: "/admin-droit-travail"
+const ADMIN_LOGIN_ROUTE = `${ADMIN_BASE_ROUTE}/login`;
 
 function toBase64Url(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer);
@@ -20,6 +26,7 @@ async function verifyToken(token: string) {
   const [tsStr, signature] = parts;
   const expiresAt = Number(tsStr);
 
+  // Token expiré ou timestamp invalide
   if (Number.isNaN(expiresAt) || Date.now() > expiresAt) {
     return false;
   }
@@ -42,19 +49,19 @@ export async function middleware(req: Request) {
   const url = new URL(req.url);
   const pathname = url.pathname;
 
-  // 1. laisser passer /expired (sinon boucle)
-  if (pathname.startsWith("/expired")) {
+  // 1. Laisser passer la page d'accès expiré (sinon boucle)
+  if (pathname.startsWith(EXPIRED_ROUTE)) {
     return NextResponse.next();
   }
 
-  // 2. protéger /admin-panel
-  if (pathname.startsWith("/admin-panel")) {
-    // laisser passer la page de login
-    if (pathname.startsWith("/admin-panel/login")) {
+  // 2. Protéger l'admin du conseiller en droit du travail
+  if (pathname.startsWith(ADMIN_BASE_ROUTE)) {
+    // laisser passer la page de login admin
+    if (pathname.startsWith(ADMIN_LOGIN_ROUTE)) {
       return NextResponse.next();
     }
 
-    // vérifier le cookie
+    // vérifier le cookie admin
     const cookies = (req.headers.get("cookie") || "")
       .split(";")
       .map((c) => c.trim());
@@ -64,31 +71,31 @@ export async function middleware(req: Request) {
     );
 
     if (!hasValidCookie) {
-      return NextResponse.redirect(new URL("/admin-panel/login", req.url));
+      return NextResponse.redirect(new URL(ADMIN_LOGIN_ROUTE, req.url));
     }
 
     return NextResponse.next();
   }
 
-  // 3. laisser passer toutes les API (chatkit, generate-link, etc.)
+  // 3. Laisser passer toutes les API (chat IA, génération de lien, etc.)
   if (pathname.startsWith("/api")) {
     return NextResponse.next();
   }
 
-  // 4. laisser passer les assets Next
+  // 4. Laisser passer les assets Next (build, favicon, etc.)
   if (pathname.startsWith("/_next") || pathname === "/favicon.ico") {
     return NextResponse.next();
   }
 
-  // 5. tout le reste → protégé par ton lien temporaire
+  // 5. Tout le reste = protégé par un lien temporaire (token)
   const token = url.searchParams.get("token");
   if (!token) {
-    return NextResponse.redirect(new URL("/expired", req.url));
+    return NextResponse.redirect(new URL(EXPIRED_ROUTE, req.url));
   }
 
   const ok = await verifyToken(token);
   if (!ok) {
-    return NextResponse.redirect(new URL("/expired", req.url));
+    return NextResponse.redirect(new URL(EXPIRED_ROUTE, req.url));
   }
 
   return NextResponse.next();
