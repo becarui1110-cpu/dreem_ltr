@@ -1,7 +1,7 @@
 // app/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import App from "./App";
 
@@ -30,7 +30,7 @@ function computeTimeParts(ms: number): TimeParts {
   };
 }
 
-export default function Home() {
+function HomeInner() {
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
@@ -248,7 +248,7 @@ export default function Home() {
               conseiller.
             </p>
             <a
-              href="https://votre-site-juridique.fr" // 👉 remplace par ton domaine
+              href="https://ltr.dreem.ch" // 👉 remplace par ton domaine
               className="inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-950 text-sm font-medium px-4 py-2 hover:bg-white/90 transition"
             >
               Retourner sur le site
@@ -268,5 +268,23 @@ export default function Home() {
         </aside>
       </main>
     </div>
+  );
+}
+
+/**
+ * Page wrapper avec Suspense pour satisfaire Next.js
+ * (useSearchParams doit être utilisé sous une boundary)
+ */
+export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400 text-sm">
+          Initialisation de la session sécurisée…
+        </div>
+      }
+    >
+      <HomeInner />
+    </Suspense>
   );
 }
