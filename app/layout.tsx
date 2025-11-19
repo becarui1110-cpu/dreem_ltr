@@ -1,6 +1,7 @@
 import Script from "next/script";
 import type { Metadata } from "next";
 import "./globals.css";
+import { ExpiryGuard } from "./expiry-guard";
 
 export const metadata: Metadata = {
   title: "AgentKit demo",
@@ -20,7 +21,11 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {/* protège le front si le token est expiré */}
+        <ExpiryGuard />
+        {children}
+      </body>
     </html>
   );
 }
