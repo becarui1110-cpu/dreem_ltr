@@ -32,10 +32,10 @@ export default function App() {
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/70">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-400">
-              Assistant MyCarAdvisor
+              Conseiller Droit du Travail
             </p>
             <p className="text-sm font-semibold text-slate-50">
-              Conseiller IA — Premium
+              Agent IA — Accompagnement juridique
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ export default function App() {
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 rounded-full border-2 border-slate-600 border-t-transparent animate-spin" />
                 <p className="text-xs text-slate-400">
-                  Initialisation de l’assistant…
+                  Initialisation du conseiller en droit du travail…
                 </p>
               </div>
             </div>
@@ -67,8 +67,10 @@ export default function App() {
 
         {/* FOOTER */}
         <div className="px-5 py-2 border-t border-slate-800 bg-slate-950/70 text-[11px] text-slate-400">
-          Les réponses sont générées automatiquement. Vérifiez les informations
-          importantes avant toute décision.
+          Les réponses sont générées automatiquement à partir d’informations
+          générales en droit du travail. Elles ne constituent pas un avis
+          juridique personnalisé. Pour toute décision importante, consultez un
+          professionnel qualifié.
         </div>
       </div>
     </main>
