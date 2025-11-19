@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
   const token = `${expiresAt}.${signature}`;
 
-  const siteUrl = "https://premium.mycaradvisor.ch";
+  const siteUrl = "https://ltr.dreem.ch";
   const link = `${siteUrl}/?token=${token}`;
 
   return new Response(JSON.stringify({ link }), {
