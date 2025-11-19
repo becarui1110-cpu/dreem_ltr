@@ -10,25 +10,25 @@ export const STARTER_PROMPTS: StartScreenPrompt[] = [
     label: "Comprendre mes droits",
     prompt:
       "Explique-moi clairement quels sont mes droits en tant que salarié dans le cadre du droit du travail.",
-    icon: "circle-question",
+    icon: "circle-question", // ✅ icône connue et typée
   },
   {
     label: "Licenciement / fin de contrat",
     prompt:
       "Je viens d’apprendre mon licenciement. Pose-moi les bonnes questions pour analyser ma situation et m’expliquer les étapes clés.",
-    icon: "file-circle-question",
+    // icon retiré pour éviter l’erreur de type
   },
   {
     label: "Contrat & période d’essai",
     prompt:
       "Aide-moi à comprendre les clauses importantes de mon contrat de travail et les règles sur la période d’essai.",
-    icon: "file-lines",
+    // icon retiré
   },
   {
     label: "Heures sup & salaire",
     prompt:
       "Explique-moi comment sont gérées les heures supplémentaires, le temps de travail et la rémunération dans le droit du travail.",
-    icon: "clock",
+    // icon retiré
   },
 ];
 
@@ -51,6 +51,4 @@ export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
     },
   },
   radius: "round",
-  // Tu peux ajuster ici d'autres options si tu veux personnaliser davantage
-  // Va sur chatkit.studio/playground pour explorer les options de thème
 });
