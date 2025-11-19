@@ -1,11 +1,84 @@
 // app/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import App from "./App";
+
+const LINK_TTL_HOURS = 6; // durée totale du lien
+
+type TimeParts = {
+  hours: string;
+  minutes: string;
+  seconds: string;
+};
+
+function computeTimeParts(ms: number): TimeParts {
+  if (ms <= 0) {
+    return { hours: "00", minutes: "00", seconds: "00" };
+  }
+
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return {
+    hours: hours.toString().padStart(2, "0"),
+    minutes: minutes.toString().padStart(2, "0"),
+    seconds: seconds.toString().padStart(2, "0"),
+  };
+}
 
 export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(true);
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // 1) Récupérer la date d'expiration dans le token (timestamp en ms)
+  useEffect(() => {
+    const token = searchParams.get("token");
+    if (!token) return;
+
+    const [tsStr] = token.split(".");
+    const ts = Number(tsStr);
+
+    if (!Number.isFinite(ts)) return;
+    setExpiresAt(ts);
+  }, [searchParams]);
+
+  // 2) Compte à rebours + redirection quand expiré
+  useEffect(() => {
+    if (!expiresAt) return;
+
+    const update = () => {
+      const diff = expiresAt - Date.now();
+      if (diff <= 0) {
+        setRemainingMs(0);
+        router.push("/expired");
+        return;
+      }
+      setRemainingMs(diff);
+    };
+
+    update(); // premier calcul immédiat
+
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt, router]);
+
+  const totalMs = LINK_TTL_HOURS * 60 * 60 * 1000;
+  const progress =
+    remainingMs == null
+      ? 1
+      : Math.max(0, Math.min(1, remainingMs / totalMs));
+
+  const timeParts = computeTimeParts(remainingMs ?? totalMs);
+
+  const hasData = remainingMs !== null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
@@ -42,7 +115,7 @@ export default function Home() {
               </h1>
               <p className="text-sm text-slate-400">
                 Posez vos questions sur le contrat, le licenciement, les heures
-                sup, les certificats de travail, etc.
+                supplémentaires, les certificats de travail, etc.
               </p>
             </div>
             <button
@@ -55,7 +128,6 @@ export default function Home() {
 
           <div className="flex-1 min-h-[430px] bg-slate-950/30">
             {isChatOpen ? (
-              // on réutilise ton composant existant
               <App />
             ) : (
               <div className="h-full flex items-center justify-center text-slate-500 text-sm py-10">
@@ -67,28 +139,105 @@ export default function Home() {
 
         {/* Right panel */}
         <aside className="space-y-4">
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-slate-100">
-              Informations d’accès
-            </h2>
+          {/* Widget compte à rebours */}
+          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-100">
+                Informations d’accès
+              </h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-300 border border-slate-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Lien sécurisé
+              </span>
+            </div>
+
             <p className="text-sm text-slate-400">
               Vous utilisez un lien d’accès temporaire à votre conseiller en
               droit du travail. Une fois expiré, il faudra en demander un
               nouveau.
             </p>
-            <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 space-y-1">
-              <p className="text-xs uppercase tracking-wide text-slate-400">
-                Durée du lien
-              </p>
-              <p className="text-base font-semibold text-slate-50">
-                24 heures
-              </p>
-              <p className="text-xs text-slate-500">
-                Le compte à rebours et la sécurité sont gérés côté serveur.
-              </p>
+
+            {/* Widget digital */}
+            <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400">
+                    Temps restant avant expiration
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Durée totale : {LINK_TTL_HOURS} heures
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-3">
+                {/* chiffres */}
+                <div className="flex items-center justify-center gap-2 font-mono">
+                  <div className="flex flex-col items-center">
+                    <div className="min-w-[3.2rem] text-center text-2xl md:text-3xl font-semibold bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 shadow-sm">
+                      {hasData ? timeParts.hours : "--"}
+                    </div>
+                    <span className="mt-1 text-[11px] uppercase tracking-wide text-slate-500">
+                      Heures
+                    </span>
+                  </div>
+
+                  <div className="text-xl md:text-2xl text-slate-500 pb-4">
+                    :
+                  </div>
+
+                  <div className="flex flex-col items-center">
+                    <div className="min-w-[3.2rem] text-center text-2xl md:text-3xl font-semibold bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 shadow-sm">
+                      {hasData ? timeParts.minutes : "--"}
+                    </div>
+                    <span className="mt-1 text-[11px] uppercase tracking-wide text-slate-500">
+                      Minutes
+                    </span>
+                  </div>
+
+                  <div className="text-xl md:text-2xl text-slate-500 pb-4">
+                    :
+                  </div>
+
+                  <div className="flex flex-col items-center">
+                    <div className="min-w-[3.2rem] text-center text-2xl md:text-3xl font-semibold bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 shadow-sm">
+                      {hasData ? timeParts.seconds : "--"}
+                    </div>
+                    <span className="mt-1 text-[11px] uppercase tracking-wide text-slate-500">
+                      Secondes
+                    </span>
+                  </div>
+                </div>
+
+                {/* statut */}
+                <p className="text-[11px] text-slate-500">
+                  {hasData
+                    ? "À l’expiration, l’accès sera automatiquement coupé pour garantir la sécurité de vos données."
+                    : "Calcul du temps restant à partir de votre lien sécurisé…"}
+                </p>
+              </div>
+
+              {/* barre de progression */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Progression du temps</span>
+                  <span>
+                    {hasData
+                      ? `${timeParts.hours}h${timeParts.minutes} restantes`
+                      : "Synchronisation…"}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-400 transition-transform duration-500 origin-left"
+                    style={{ transform: `scaleX(${progress})` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Bloc aide */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-3">
             <h2 className="text-sm font-semibold text-slate-100">
               Besoin d’aide ?
@@ -106,6 +255,7 @@ export default function Home() {
             </a>
           </div>
 
+          {/* Bloc info expert */}
           <div className="bg-gradient-to-r from-emerald-500/15 to-slate-900/0 border border-emerald-500/20 rounded-2xl p-4">
             <p className="text-xs uppercase tracking-wide text-emerald-200 mb-1">
               Accès expert
