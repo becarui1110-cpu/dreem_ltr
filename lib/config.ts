@@ -7,15 +7,36 @@ export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 
 export const STARTER_PROMPTS: StartScreenPrompt[] = [
   {
-    label: "What can you do?",
-    prompt: "What can you do?",
+    label: "Comprendre mes droits",
+    prompt:
+      "Explique-moi clairement quels sont mes droits en tant que salarié dans le cadre du droit du travail.",
     icon: "circle-question",
+  },
+  {
+    label: "Licenciement / fin de contrat",
+    prompt:
+      "Je viens d’apprendre mon licenciement. Pose-moi les bonnes questions pour analyser ma situation et m’expliquer les étapes clés.",
+    icon: "file-circle-question",
+  },
+  {
+    label: "Contrat & période d’essai",
+    prompt:
+      "Aide-moi à comprendre les clauses importantes de mon contrat de travail et les règles sur la période d’essai.",
+    icon: "file-lines",
+  },
+  {
+    label: "Heures sup & salaire",
+    prompt:
+      "Explique-moi comment sont gérées les heures supplémentaires, le temps de travail et la rémunération dans le droit du travail.",
+    icon: "clock",
   },
 ];
 
-export const PLACEHOLDER_INPUT = "Ask anything...";
+export const PLACEHOLDER_INPUT =
+  "Posez votre question sur votre situation de travail…";
 
-export const GREETING = "How can I help you today?";
+export const GREETING =
+  "Bonjour, je suis votre conseiller IA en droit du travail. Décrivez votre situation (contrat, licenciement, heures sup, harcèlement, etc.) et je vous aiderai à y voir plus clair.";
 
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
   color: {
@@ -30,6 +51,6 @@ export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
     },
   },
   radius: "round",
-  // Add other theme options here
-  // chatkit.studio/playground to explore config options
+  // Tu peux ajuster ici d'autres options si tu veux personnaliser davantage
+  // Va sur chatkit.studio/playground pour explorer les options de thème
 });
