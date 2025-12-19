@@ -21,6 +21,8 @@ function getTokenFromUrl(): string {
 
 export default function App() {
   const { scheme, setScheme } = useColorScheme();
+
+  const [hydrated, setHydrated] = useState(false); // ✅ quota chargé
   const [ready, setReady] = useState(false);
 
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
@@ -28,8 +30,6 @@ export default function App() {
 
   const ignoredFirstEndRef = useRef(false);
   const lastCountAtRef = useRef(0);
-
-  // ✅ clé localStorage liée au token
   const storageKeyRef = useRef<string>("");
 
   const handleWidgetAction = useCallback(async (action: FactAction) => {
@@ -38,10 +38,8 @@ export default function App() {
     }
   }, []);
 
-  // ✅ init quota depuis localStorage (par token)
+  // ✅ 1) Charger quota depuis localStorage AVANT de monter le chat
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
     storageKeyRef.current = key;
@@ -49,7 +47,6 @@ export default function App() {
     const raw = window.localStorage.getItem(key);
     const restored = raw == null ? MAX_ANSWERS : clampRemaining(Number(raw));
 
-    // si pas encore en storage, on initialise
     if (raw == null) {
       window.localStorage.setItem(key, String(MAX_ANSWERS));
     }
@@ -63,23 +60,23 @@ export default function App() {
         detail: { remaining: restored },
       })
     );
+
+    setHydrated(true);
   }, []);
 
   const persistRemaining = useCallback((value: number) => {
-    if (typeof window === "undefined") return;
     const key = storageKeyRef.current;
     if (!key) return;
     window.localStorage.setItem(key, String(value));
   }, []);
 
+  // ✅ 2) Decrémenter quota quand réponse finit (avec garde-fous)
   const handleResponseEnd = useCallback(() => {
-    // 1) ignorer la première fin (souvent greeting)
     if (!ignoredFirstEndRef.current) {
-      ignoredFirstEndRef.current = true;
+      ignoredFirstEndRef.current = true; // ignore greeting
       return;
     }
 
-    // 2) anti double-count
     const now = Date.now();
     if (now - lastCountAtRef.current < MIN_MS_BETWEEN_COUNTS) return;
     lastCountAtRef.current = now;
@@ -87,27 +84,36 @@ export default function App() {
     setRemaining((prev) => {
       const next = Math.max(prev - 1, 0);
 
-      // persist
       persistRemaining(next);
 
-      // sync page.tsx
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent<{ remaining: number }>("ltr-quota-update", {
-            detail: { remaining: next },
-          })
-        );
-      }
+      window.dispatchEvent(
+        new CustomEvent<{ remaining: number }>("ltr-quota-update", {
+          detail: { remaining: next },
+        })
+      );
 
       if (next <= 0) setBlocked(true);
       return next;
     });
   }, [persistRemaining]);
 
+  // ✅ 3) Ready (petit délai UI)
   useEffect(() => {
-    const timer = setTimeout(() => setReady(true), 500);
+    const timer = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(timer);
   }, []);
+
+  // ⛔ Tant que quota pas chargé, on ne monte PAS ChatKitPanel
+  if (!hydrated) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-slate-950/40">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 rounded-full border-2 border-slate-600 border-t-transparent animate-spin" />
+          <p className="text-xs text-slate-400">Chargement de l’accès…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col min-h-0 relative">
@@ -144,6 +150,7 @@ export default function App() {
             {blocked && (
               <div className="pointer-events-auto absolute inset-x-0 bottom-0">
                 <div className="h-16 bg-gradient-to-t from-slate-950/95 to-transparent" />
+
                 <div className="bg-slate-950/95 border-t border-slate-800 px-4 py-3">
                   <p className="text-sm font-semibold text-slate-100">
                     Quota atteint
@@ -161,7 +168,7 @@ export default function App() {
                   </a>
                 </div>
 
-                {/* couche qui empêche le clic sur la zone input en bas */}
+                {/* couche qui bloque uniquement la zone input */}
                 <div className="absolute inset-x-0 bottom-0 h-28 cursor-not-allowed" />
               </div>
             )}
@@ -171,7 +178,7 @@ export default function App() {
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 rounded-full border-2 border-slate-600 border-t-transparent animate-spin" />
               <p className="text-xs text-slate-400">
-                Initialisation du conseiller en droit du travail…
+                Initialisation du conseiller…
               </p>
             </div>
           </div>
