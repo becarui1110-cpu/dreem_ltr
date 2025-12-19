@@ -6,10 +6,37 @@ import App from "./App";
 
 const MAX_ANSWERS = 5;
 
+function clampRemaining(n: number) {
+  if (!Number.isFinite(n)) return MAX_ANSWERS;
+  return Math.max(0, Math.min(MAX_ANSWERS, Math.floor(n)));
+}
+
+function getTokenFromUrl(): string {
+  if (typeof window === "undefined") return "no-window";
+  const sp = new URLSearchParams(window.location.search);
+  return sp.get("token") ?? "no-token";
+}
+
 function HomeInner() {
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
   const [infoOpen, setInfoOpen] = useState(false);
+
+  // ✅ Hydrate le compteur dès le chargement (pour éviter le "5" au refresh)
+  useEffect(() => {
+    const token = getTokenFromUrl();
+    const key = `ltr_quota_remaining:${token}`;
+
+    const raw = window.localStorage.getItem(key);
+    const restored = raw == null ? MAX_ANSWERS : clampRemaining(Number(raw));
+
+    // si pas encore init (première visite), on initialise
+    if (raw == null) {
+      window.localStorage.setItem(key, String(MAX_ANSWERS));
+    }
+
+    setRemaining(restored);
+  }, []);
 
   // 🔄 écouter les mises à jour envoyées par App.tsx (quota)
   useEffect(() => {
@@ -186,7 +213,7 @@ function HomeInner() {
                   className="h-full bg-emerald-400 transition-all duration-500 origin-left"
                   style={{ transform: `scaleX(${progress})` }}
                 />
-                </div>
+              </div>
             </div>
             <a
               href="https://ltr.dreem.ch"
@@ -201,7 +228,6 @@ function HomeInner() {
   );
 }
 
-// Wrapper Suspense (plus obligatoire, mais OK de le garder)
 export default function HomePage() {
   return (
     <Suspense
