@@ -6,9 +6,18 @@ import { ChatKitPanel, type FactAction } from "@/components/ChatKitPanel";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 const MAX_ANSWERS = 5;
-
-// anti double-décompte si ChatKitPanel déclenche onResponseEnd plusieurs fois
 const MIN_MS_BETWEEN_COUNTS = 1200;
+
+function clampRemaining(n: number) {
+  if (!Number.isFinite(n)) return MAX_ANSWERS;
+  return Math.max(0, Math.min(MAX_ANSWERS, Math.floor(n)));
+}
+
+function getTokenFromUrl(): string {
+  if (typeof window === "undefined") return "no-window";
+  const sp = new URLSearchParams(window.location.search);
+  return sp.get("token") ?? "no-token";
+}
 
 export default function App() {
   const { scheme, setScheme } = useColorScheme();
@@ -17,11 +26,11 @@ export default function App() {
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
   const [blocked, setBlocked] = useState(false);
 
-  // ✅ ignore la première fin de réponse (souvent le greeting)
   const ignoredFirstEndRef = useRef(false);
-
-  // ✅ anti-double count
   const lastCountAtRef = useRef(0);
+
+  // ✅ clé localStorage liée au token
+  const storageKeyRef = useRef<string>("");
 
   const handleWidgetAction = useCallback(async (action: FactAction) => {
     if (process.env.NODE_ENV !== "production") {
@@ -29,25 +38,48 @@ export default function App() {
     }
   }, []);
 
-  // sync initial vers page.tsx
+  // ✅ init quota depuis localStorage (par token)
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent<{ remaining: number }>("ltr-quota-update", {
-          detail: { remaining: MAX_ANSWERS },
-        })
-      );
+    if (typeof window === "undefined") return;
+
+    const token = getTokenFromUrl();
+    const key = `ltr_quota_remaining:${token}`;
+    storageKeyRef.current = key;
+
+    const raw = window.localStorage.getItem(key);
+    const restored = raw == null ? MAX_ANSWERS : clampRemaining(Number(raw));
+
+    // si pas encore en storage, on initialise
+    if (raw == null) {
+      window.localStorage.setItem(key, String(MAX_ANSWERS));
     }
+
+    setRemaining(restored);
+    setBlocked(restored <= 0);
+
+    // sync vers page.tsx
+    window.dispatchEvent(
+      new CustomEvent<{ remaining: number }>("ltr-quota-update", {
+        detail: { remaining: restored },
+      })
+    );
+  }, []);
+
+  const persistRemaining = useCallback((value: number) => {
+    if (typeof window === "undefined") return;
+    const key = storageKeyRef.current;
+    if (!key) return;
+    window.localStorage.setItem(key, String(value));
   }, []);
 
   const handleResponseEnd = useCallback(() => {
-    // 1) ignorer le greeting
+    // 1) ignorer la première fin (souvent greeting)
     if (!ignoredFirstEndRef.current) {
       ignoredFirstEndRef.current = true;
       return;
     }
 
-    // 2) anti double-count (si onResponseEnd se déclenche 2x)
+    // 2) anti double-count
     const now = Date.now();
     if (now - lastCountAtRef.current < MIN_MS_BETWEEN_COUNTS) return;
     lastCountAtRef.current = now;
@@ -55,6 +87,10 @@ export default function App() {
     setRemaining((prev) => {
       const next = Math.max(prev - 1, 0);
 
+      // persist
+      persistRemaining(next);
+
+      // sync page.tsx
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent<{ remaining: number }>("ltr-quota-update", {
@@ -66,7 +102,7 @@ export default function App() {
       if (next <= 0) setBlocked(true);
       return next;
     });
-  }, []);
+  }, [persistRemaining]);
 
   useEffect(() => {
     const timer = setTimeout(() => setReady(true), 500);
@@ -74,7 +110,6 @@ export default function App() {
   }, []);
 
   return (
-    // ✅ IMPORTANT: pas de <main> plein écran ici, juste remplir le parent
     <div className="w-full h-full flex flex-col min-h-0 relative">
       {/* Bandeau quota */}
       <div className="px-3 py-1 text-[11px] text-slate-400 bg-slate-900/80 border-b border-slate-800 flex justify-between items-center">
@@ -105,12 +140,10 @@ export default function App() {
               onThemeRequest={setScheme}
             />
 
-            {/* ✅ Bloquer uniquement la saisie, pas la lecture */}
+            {/* ✅ Bloquer uniquement la saisie, lecture OK */}
             {blocked && (
               <div className="pointer-events-auto absolute inset-x-0 bottom-0">
-                {/* un léger gradient au-dessus de la zone de saisie */}
                 <div className="h-16 bg-gradient-to-t from-slate-950/95 to-transparent" />
-
                 <div className="bg-slate-950/95 border-t border-slate-800 px-4 py-3">
                   <p className="text-sm font-semibold text-slate-100">
                     Quota atteint
@@ -128,7 +161,7 @@ export default function App() {
                   </a>
                 </div>
 
-                {/* ✅ couche qui empêche le clic sur l’input uniquement en bas */}
+                {/* couche qui empêche le clic sur la zone input en bas */}
                 <div className="absolute inset-x-0 bottom-0 h-28 cursor-not-allowed" />
               </div>
             )}
