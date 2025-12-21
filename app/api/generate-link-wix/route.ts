@@ -37,8 +37,8 @@ function json(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
-      "content-type": "application/json",
-      // ✅ utile si Wix appelle depuis un autre domaine
+      // ✅ Wix détecte mieux avec charset
+      "content-type": "application/json; charset=utf-8",
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET,POST,OPTIONS",
       "access-control-allow-headers": "Content-Type",
@@ -51,7 +51,6 @@ export async function OPTIONS() {
 }
 
 function resolveSiteUrl() {
-  // ✅ Mets directement ltr.dreem.ch par défaut
   return (process.env.SITE_URL || "https://ltr.dreem.ch").replace(/\/$/, "");
 }
 
@@ -76,12 +75,24 @@ async function buildLink(durationMinutes: number) {
 /** ✅ GET: /api/generate-link-wix?duration=360 */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const durationMinutes = resolveDurationMinutes(searchParams.get("duration"), 360);
+  const durationMinutes = resolveDurationMinutes(
+    searchParams.get("duration"),
+    360
+  );
 
   const result = await buildLink(durationMinutes);
-  if ("error" in result) return json({ error: result.error }, result.status);
+  if ("error" in result) return json({ ok: false, error: result.error }, result.status);
 
-  return json({ link: result.link, durationMinutes: result.durationMinutes }, result.status);
+  // ✅ Solution 1: doubler le lien dans `result`
+  return json(
+    {
+      ok: true,
+      link: result.link,
+      result: result.link, // 👈 Wix va souvent plus facilement mapper "result"
+      durationMinutes: result.durationMinutes,
+    },
+    result.status
+  );
 }
 
 /** ✅ POST: { "duration": 360 } */
@@ -96,7 +107,16 @@ export async function POST(req: Request) {
   }
 
   const result = await buildLink(durationMinutes);
-  if ("error" in result) return json({ error: result.error }, result.status);
+  if ("error" in result) return json({ ok: false, error: result.error }, result.status);
 
-  return json({ link: result.link, durationMinutes: result.durationMinutes }, result.status);
+  // ✅ Solution 1: doubler le lien dans `result`
+  return json(
+    {
+      ok: true,
+      link: result.link,
+      result: result.link, // 👈 Wix va souvent plus facilement mapper "result"
+      durationMinutes: result.durationMinutes,
+    },
+    result.status
+  );
 }
