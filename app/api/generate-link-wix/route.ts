@@ -1,3 +1,4 @@
+// app/api/generate-link-wix/route.ts
 export const runtime = "edge";
 
 const encoder = new TextEncoder();
@@ -22,54 +23,80 @@ async function makeToken(secret: string, minutes: number) {
     ["sign"]
   );
 
-  const sigBuf = await crypto.subtle.sign("HMAC", key, encoder.encode(String(expiresAt)));
+  const sigBuf = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(String(expiresAt))
+  );
   const signature = toBase64Url(sigBuf);
 
-  // format : <timestamp_en_ms>.<signature>
   return `${expiresAt}.${signature}`;
 }
 
-/** === POST handler : génère le lien sécurisé pour l’IA droit du travail === */
-export async function POST(req: Request) {
-  const tokenSecret = process.env.TOKEN_SECRET;
-
-  // 👉 Mets ici l’URL de ton conseiller droit du travail
-  const siteUrl = (process.env.SITE_URL || "https://conseiller-droit-travail.dreem.ch").replace(/\/$/, "");
-
-  if (!tokenSecret) {
-    return new Response(JSON.stringify({ error: "TOKEN_SECRET missing in Vercel" }), {
-      status: 500,
-      headers: { "content-type": "application/json" },
-    });
-  }
-
-  // ⏱️ 6h par défaut = 360 minutes
-  let durationMinutes = 360;
-  try {
-    const body = (await req.json()) as { duration?: number | string };
-    if (body?.duration) {
-      const val = Number(body.duration);
-      if (!Number.isNaN(val) && val > 0) durationMinutes = val;
-    }
-  } catch {
-    // pas grave, on garde 360 min (6h) par défaut
-  }
-
-  const token = await makeToken(tokenSecret, durationMinutes);
-  const link = `${siteUrl}/?token=${encodeURIComponent(token)}`;
-
-  return new Response(JSON.stringify({ link, durationMinutes }), {
-    status: 200,
-    headers: { "content-type": "application/json" },
+function json(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "content-type": "application/json",
+      // ✅ utile si Wix appelle depuis un autre domaine
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET,POST,OPTIONS",
+      "access-control-allow-headers": "Content-Type",
+    },
   });
 }
 
-/** === GET (info) === */
-export async function GET() {
-  return new Response(
-    JSON.stringify({
-      message: 'Use POST with JSON body: { "duration": 360 }  // 360 minutes = 6h',
-    }),
-    { status: 405, headers: { "content-type": "application/json" } }
-  );
+export async function OPTIONS() {
+  return json({ ok: true }, 200);
+}
+
+function resolveSiteUrl() {
+  // ✅ Mets directement ltr.dreem.ch par défaut
+  return (process.env.SITE_URL || "https://ltr.dreem.ch").replace(/\/$/, "");
+}
+
+function resolveDurationMinutes(value: unknown, fallback = 360) {
+  const val = typeof value === "string" ? Number(value) : (value as number);
+  return Number.isFinite(val) && val > 0 ? Math.floor(val) : fallback;
+}
+
+async function buildLink(durationMinutes: number) {
+  const tokenSecret = process.env.TOKEN_SECRET;
+  if (!tokenSecret) {
+    return { error: "TOKEN_SECRET missing in Vercel", status: 500 as const };
+  }
+
+  const siteUrl = resolveSiteUrl();
+  const token = await makeToken(tokenSecret, durationMinutes);
+  const link = `${siteUrl}/?token=${encodeURIComponent(token)}`;
+
+  return { link, durationMinutes, status: 200 as const };
+}
+
+/** ✅ GET: /api/generate-link-wix?duration=360 */
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const durationMinutes = resolveDurationMinutes(searchParams.get("duration"), 360);
+
+  const result = await buildLink(durationMinutes);
+  if ("error" in result) return json({ error: result.error }, result.status);
+
+  return json({ link: result.link, durationMinutes: result.durationMinutes }, result.status);
+}
+
+/** ✅ POST: { "duration": 360 } */
+export async function POST(req: Request) {
+  let durationMinutes = 360;
+
+  try {
+    const body = (await req.json()) as { duration?: number | string };
+    durationMinutes = resolveDurationMinutes(body?.duration, 360);
+  } catch {
+    // keep default
+  }
+
+  const result = await buildLink(durationMinutes);
+  if ("error" in result) return json({ error: result.error }, result.status);
+
+  return json({ link: result.link, durationMinutes: result.durationMinutes }, result.status);
 }
