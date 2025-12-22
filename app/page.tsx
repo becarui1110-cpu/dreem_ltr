@@ -1,7 +1,6 @@
 // app/page.tsx (LTR)
 "use client";
 
-import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
 import App from "./App";
 
@@ -18,12 +17,26 @@ function getTokenFromUrl(): string {
   return sp.get("token") ?? "no-token";
 }
 
+function DreemLogo() {
+  return (
+    <div className="h-9 w-9 rounded-full bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
+      <img
+        src="/dreem_w.png"
+        alt="Dreem"
+        width={22}
+        height={22}
+        style={{ objectFit: "contain", display: "block" }}
+      />
+    </div>
+  );
+}
+
 function HomeInner() {
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // ✅ Hydrate compteur au chargement
+  // Hydrate compteur (anti reset au refresh)
   useEffect(() => {
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
@@ -35,7 +48,7 @@ function HomeInner() {
     setRemaining(restored);
   }, []);
 
-  // 🔄 écoute updates depuis App.tsx
+  // Écoute les updates quota envoyées par App.tsx
   useEffect(() => {
     const handler: EventListener = (event) => {
       const e = event as CustomEvent<{ remaining: number }>;
@@ -56,18 +69,7 @@ function HomeInner() {
       <header className="border-b border-slate-800 bg-slate-950/70 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-3">
-            {/* ✅ Logo Dreem */}
-            <div className="h-9 w-9 rounded-full bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
-              <Image
-                src="/dreem_w.png"
-                alt="Dreem"
-                width={22}
-                height={22}
-                className="object-contain"
-                priority
-              />
-            </div>
-
+            <DreemLogo />
             <div>
               <p className="text-sm uppercase tracking-wide text-slate-300">
                 Conseiller Droit du Travail
@@ -78,7 +80,6 @@ function HomeInner() {
 
           <div className="flex items-center gap-2 text-sm text-slate-300">
             <span className="hidden sm:inline">Session sécurisée</span>
-
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-300 px-3 py-1 text-xs border border-emerald-500/30">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               Actif
@@ -106,10 +107,9 @@ function HomeInner() {
                 Votre conseiller en droit du travail
               </h1>
               <p className="text-sm text-slate-400">
-                Contrat, licenciement, heures sup, certificats de travail…
+                Contrat, licenciement, heures sup., certificats de travail, etc.
               </p>
             </div>
-
             <button
               onClick={() => setIsChatOpen((p) => !p)}
               className="text-xs border border-slate-700 hover:border-slate-500 px-3 py-1 rounded-lg bg-slate-900"
@@ -131,27 +131,20 @@ function HomeInner() {
 
         {/* Right panel */}
         <aside className="space-y-4">
-          {/* Widget quota */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-100">
                 Quota d’accès
               </h2>
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-300 border border-slate-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Lien limité
               </span>
             </div>
-
-            <p className="text-sm text-slate-400">
-              Chaque réponse complète consomme 1 crédit.
-            </p>
 
             <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-center">
               <p className="text-xs uppercase tracking-wide text-slate-400">
                 Réponses restantes
               </p>
-
               <p className="text-3xl font-mono font-semibold text-slate-50">
                 {remaining}{" "}
                 <span className="text-slate-500 text-sm">/ {MAX_ANSWERS}</span>
@@ -163,16 +156,19 @@ function HomeInner() {
                   style={{ transform: `scaleX(${progress})` }}
                 />
               </div>
+
+              <p className="text-[11px] text-slate-500">
+                Chaque réponse complète consomme 1 crédit.
+              </p>
             </div>
           </div>
 
-          {/* Aide */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-3">
             <h2 className="text-sm font-semibold text-slate-100">
               Besoin d’aide ?
             </h2>
             <p className="text-sm text-slate-400">
-              Si le quota est atteint, demande un nouvel accès.
+              Si le quota est atteint, demandez un nouvel accès.
             </p>
             <a
               href="https://www.dreem.ch/product-page/discutez-avec-un-conseiller-du-travail-ia"
@@ -197,6 +193,12 @@ function HomeInner() {
             <p className="text-xl font-mono text-center">
               {remaining} / {MAX_ANSWERS}
             </p>
+            <a
+              href="https://www.dreem.ch/product-page/discutez-avec-un-conseiller-du-travail-ia"
+              className="inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-950 text-sm font-medium px-4 py-2 hover:bg-white/90 transition w-full"
+            >
+              Demander un nouvel accès
+            </a>
           </div>
         </section>
       </main>
