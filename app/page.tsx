@@ -1,6 +1,7 @@
 // app/page.tsx (LTR)
 "use client";
 
+import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
 import App from "./App";
 
