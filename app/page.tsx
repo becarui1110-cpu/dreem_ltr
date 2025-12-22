@@ -1,8 +1,6 @@
-// app/page.tsx (LTR)
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import Image from "next/image";
 import App from "./App";
 
 const MAX_ANSWERS = 5;
@@ -23,9 +21,7 @@ function HomeInner() {
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  /* ===============================
-     🔁 Hydratation quota
-     =============================== */
+  // 🔁 Hydratation quota
   useEffect(() => {
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
@@ -40,11 +36,9 @@ function HomeInner() {
     setRemaining(restored);
   }, []);
 
-  /* ===============================
-     🔔 Sync depuis App.tsx
-     =============================== */
+  // 🔔 Écoute des updates quota
   useEffect(() => {
-    const handler: EventListener = (event) => {
+    const handler = (event: Event) => {
       const e = event as CustomEvent<{ remaining: number }>;
       if (typeof e.detail?.remaining === "number") {
         setRemaining(clampRemaining(e.detail.remaining));
@@ -61,29 +55,28 @@ function HomeInner() {
     <div className="min-h-dvh bg-slate-950 text-slate-50 flex flex-col">
       {/* ================= HEADER ================= */}
       <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          {/* Logo + titre */}
-          <div className="flex items-center gap-3">
-            <div className="relative h-8 w-8 rounded-full bg-slate-900 border border-slate-700 overflow-hidden">
-              <Image
-                src="/dreem_w.png"
-                alt="Dreem"
-                fill
-                sizes="32px"
-                className="object-contain p-1"
-                priority
-              />
-            </div>
+        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
+          {/* 🔥 LOGO + TITRE */}
+          <div className="flex items-center gap-5">
+            {/* Logo Dreem – large et stable */}
+            <img
+              src="/dreem_w.png"
+              alt="Dreem"
+              className="h-12 sm:h-14 md:h-16 w-auto object-contain"
+              draggable={false}
+            />
 
             <div>
               <p className="text-[11px] uppercase tracking-wide text-slate-300">
                 Conseiller droit du travail
               </p>
-              <p className="text-base font-semibold">Agent IA Expert</p>
+              <p className="text-base font-semibold">
+                Agent IA Expert
+              </p>
             </div>
           </div>
 
-          {/* Status + mobile infos */}
+          {/* Statut */}
           <div className="flex items-center gap-2">
             <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-300 px-3 py-1 text-xs border border-emerald-500/30">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -101,8 +94,8 @@ function HomeInner() {
       </header>
 
       {/* ================= MAIN ================= */}
-      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6 grid md:grid-cols-[1.1fr_0.55fr] gap-6">
-        {/* ========== CHAT PANEL ========== */}
+      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6 grid grid-cols-1 md:grid-cols-[1.1fr_0.55fr] gap-6">
+        {/* ===== CHAT ===== */}
         <section className="bg-slate-900/40 border border-slate-800 rounded-2xl min-h-[520px] flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
             <div>
@@ -110,10 +103,9 @@ function HomeInner() {
                 Votre conseiller en droit du travail
               </h1>
               <p className="text-sm text-slate-400">
-                Contrat, licenciement, heures supplémentaires, certificats, etc.
+                Contrats, licenciement, heures supplémentaires, certificats…
               </p>
             </div>
-
             <button
               onClick={() => setIsChatOpen((p) => !p)}
               className="text-xs border border-slate-700 hover:border-slate-500 px-3 py-1 rounded-lg bg-slate-900"
@@ -122,18 +114,18 @@ function HomeInner() {
             </button>
           </div>
 
-          <div className="flex-1 min-h-[430px] bg-slate-950/30">
+          <div className="flex-1 bg-slate-950/30">
             {isChatOpen ? (
               <App />
             ) : (
               <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-                Chat masqué. Cliquez sur “Afficher”.
+                Chat masqué.
               </div>
             )}
           </div>
         </section>
 
-        {/* ========== PANEL DROIT ========== */}
+        {/* ===== SIDEBAR ===== */}
         <aside className="space-y-4">
           {/* Quota */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
@@ -168,11 +160,8 @@ function HomeInner() {
 
           {/* Aide */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-slate-100">
-              Besoin d’aide ?
-            </h2>
             <p className="text-sm text-slate-400">
-              Si le quota est atteint, demandez un nouvel accès.
+              Si le quota est atteint, vous pouvez demander un nouvel accès.
             </p>
             <a
               href="https://www.dreem.ch/product-page/discutez-avec-un-conseiller-du-travail-ia"
@@ -182,26 +171,11 @@ function HomeInner() {
             </a>
           </div>
         </aside>
-
-        {/* ========== INFOS MOBILE ========== */}
-        <section
-          className={`md:hidden transition-[max-height,opacity] duration-300 overflow-hidden ${
-            infoOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-3 text-center">
-            <p className="text-sm text-slate-400">Réponses restantes</p>
-            <p className="text-xl font-mono">
-              {remaining} / {MAX_ANSWERS}
-            </p>
-          </div>
-        </section>
       </main>
     </div>
   );
 }
 
-/* ================= WRAPPER ================= */
 export default function HomePage() {
   return (
     <Suspense
