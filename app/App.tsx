@@ -1,4 +1,4 @@
-// app/App.tsx (LTR) — quota + blocage saisie (bouton cliquable)
+// app/App.tsx (LTR)
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -7,6 +7,9 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 
 const MAX_ANSWERS = 5;
 const MIN_MS_BETWEEN_COUNTS = 1200;
+
+const NEW_ACCESS_URL =
+  "https://www.dreem.ch/product-page/discutez-avec-un-conseiller-du-travail-ia";
 
 function clampRemaining(n: number) {
   if (!Number.isFinite(n)) return MAX_ANSWERS;
@@ -17,57 +20,6 @@ function getTokenFromUrl(): string {
   if (typeof window === "undefined") return "no-window";
   const sp = new URLSearchParams(window.location.search);
   return sp.get("token") ?? "no-token";
-}
-
-function dispatchQuotaUpdate(remaining: number) {
-  window.dispatchEvent(
-    new CustomEvent<{ remaining: number }>("ltr-quota-update", {
-      detail: { remaining },
-    })
-  );
-}
-
-/** ✅ Désactive vraiment la saisie (input/textarea + bouton send) */
-function setChatInputDisabled(disabled: boolean) {
-  const root =
-    document.querySelector<HTMLElement>("[data-chatkit-root]") ??
-    document.querySelector<HTMLElement>("[data-chatkit]") ??
-    document.body;
-
-  const inputs = root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-    "textarea, input[type='text'], input:not([type])"
-  );
-
-  inputs.forEach((el) => {
-    el.disabled = disabled;
-    el.setAttribute("aria-disabled", disabled ? "true" : "false");
-
-    if (disabled) {
-      el.setAttribute(
-        "placeholder",
-        "Quota atteint — un nouvel accès est requis."
-      );
-    }
-  });
-
-  const buttons = root.querySelectorAll<HTMLButtonElement>("button");
-  buttons.forEach((btn) => {
-    const label = (btn.textContent || "").trim().toLowerCase();
-    const aria = (btn.getAttribute("aria-label") || "").trim().toLowerCase();
-
-    const looksLikeSend =
-      label === "send" ||
-      label === "envoyer" ||
-      label.includes("send") ||
-      label.includes("envoy") ||
-      aria.includes("send") ||
-      aria.includes("envoy");
-
-    if (looksLikeSend) {
-      btn.disabled = disabled;
-      btn.setAttribute("aria-disabled", disabled ? "true" : "false");
-    }
-  });
 }
 
 export default function App() {
@@ -89,7 +41,7 @@ export default function App() {
     }
   }, []);
 
-  /** ✅ 1) Charger quota avant de monter le chat */
+  // 1) Charger quota depuis localStorage avant de monter ChatKit
   useEffect(() => {
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
@@ -104,7 +56,12 @@ export default function App() {
 
     setRemaining(restored);
     setBlocked(restored <= 0);
-    dispatchQuotaUpdate(restored);
+
+    window.dispatchEvent(
+      new CustomEvent<{ remaining: number }>("ltr-quota-update", {
+        detail: { remaining: restored },
+      })
+    );
 
     setHydrated(true);
   }, []);
@@ -115,10 +72,11 @@ export default function App() {
     window.localStorage.setItem(key, String(value));
   }, []);
 
-  /** ✅ 2) Décrémenter quota quand réponse finit */
+  // 2) Décrémenter quota à la fin de la réponse (garde-fous)
   const handleResponseEnd = useCallback(() => {
+    // ignore greeting
     if (!ignoredFirstEndRef.current) {
-      ignoredFirstEndRef.current = true; // ignore greeting
+      ignoredFirstEndRef.current = true;
       return;
     }
 
@@ -130,38 +88,25 @@ export default function App() {
       const next = Math.max(prev - 1, 0);
 
       persistRemaining(next);
-      dispatchQuotaUpdate(next);
+
+      window.dispatchEvent(
+        new CustomEvent<{ remaining: number }>("ltr-quota-update", {
+          detail: { remaining: next },
+        })
+      );
 
       if (next <= 0) setBlocked(true);
       return next;
     });
   }, [persistRemaining]);
 
-  /** ✅ 3) Ready */
+  // 3) Ready (petit délai UI)
   useEffect(() => {
     const timer = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(timer);
   }, []);
 
-  /** ✅ 4) Bloquer réellement la saisie (et rester cliquable) */
-  useEffect(() => {
-    if (!hydrated) return;
-
-    setChatInputDisabled(blocked);
-
-    const root =
-      document.querySelector<HTMLElement>("[data-chatkit-root]") ??
-      document.querySelector<HTMLElement>("[data-chatkit]") ??
-      document.body;
-
-    const obs = new MutationObserver(() => {
-      setChatInputDisabled(blocked);
-    });
-
-    obs.observe(root, { childList: true, subtree: true });
-    return () => obs.disconnect();
-  }, [blocked, hydrated]);
-
+  // Tant que quota pas chargé, on ne monte pas ChatKitPanel
   if (!hydrated) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-slate-950/40">
@@ -204,12 +149,14 @@ export default function App() {
               onThemeRequest={setScheme}
             />
 
-            {/* ✅ Overlay blocage: lecture OK + bouton cliquable */}
+            {/* ✅ Blocage saisie, bouton cliquable */}
             {blocked && (
-              <div className="pointer-events-auto absolute inset-x-0 bottom-0">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0">
+                {/* fondu */}
                 <div className="h-16 bg-gradient-to-t from-slate-950/95 to-transparent" />
 
-                <div className="bg-slate-950/95 border-t border-slate-800 px-4 py-3">
+                {/* panneau (cliquable) */}
+                <div className="pointer-events-auto bg-slate-950/95 border-t border-slate-800 px-4 py-3">
                   <p className="text-sm font-semibold text-slate-100">
                     Quota atteint
                   </p>
@@ -219,15 +166,17 @@ export default function App() {
                   </p>
 
                   <a
-                    href="https://ltr.dreem.ch"
+                    href={NEW_ACCESS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="mt-3 inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-950 text-xs font-medium px-4 py-2 hover:bg-white/90 transition"
                   >
                     Demander un nouvel accès
                   </a>
                 </div>
 
-                {/* ⚠️ IMPORTANT: aucune couche qui bloque les clics */}
-                {/* Le blocage se fait via disabled sur l’input + bouton send */}
+                {/* couche qui bloque uniquement la zone input (NON cliquable ailleurs) */}
+                <div className="pointer-events-auto absolute inset-x-0 bottom-0 h-28 cursor-not-allowed" />
               </div>
             )}
           </>
