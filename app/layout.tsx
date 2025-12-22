@@ -5,24 +5,23 @@ import "./globals.css";
 import { ExpiryGuard } from "./expiry-guard";
 
 export const metadata: Metadata = {
-  title: "LTR Dreem",
-  description: "Conseiller IA — Droit du travail",
+  title: "Dreem — Agent IA",
+  description: "Agents IA Dreem",
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/favicon.ico",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="fr">
       <head>
-        {/* Script ChatKit */}
         <Script
           src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
           strategy="beforeInteractive"
