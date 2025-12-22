@@ -1,8 +1,8 @@
 // app/page.tsx (LTR)
 "use client";
 
-import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
+import Image from "next/image";
 import App from "./App";
 
 const MAX_ANSWERS = 5;
@@ -23,6 +23,9 @@ function HomeInner() {
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
   const [infoOpen, setInfoOpen] = useState(false);
 
+  /* ===============================
+     🔁 Hydratation quota
+     =============================== */
   useEffect(() => {
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
@@ -30,15 +33,22 @@ function HomeInner() {
     const raw = window.localStorage.getItem(key);
     const restored = raw == null ? MAX_ANSWERS : clampRemaining(Number(raw));
 
-    if (raw == null) window.localStorage.setItem(key, String(MAX_ANSWERS));
+    if (raw == null) {
+      window.localStorage.setItem(key, String(MAX_ANSWERS));
+    }
+
     setRemaining(restored);
   }, []);
 
+  /* ===============================
+     🔔 Sync depuis App.tsx
+     =============================== */
   useEffect(() => {
     const handler: EventListener = (event) => {
-      const customEvent = event as CustomEvent<{ remaining: number }>;
-      if (typeof customEvent.detail?.remaining !== "number") return;
-      setRemaining(clampRemaining(customEvent.detail.remaining));
+      const e = event as CustomEvent<{ remaining: number }>;
+      if (typeof e.detail?.remaining === "number") {
+        setRemaining(clampRemaining(e.detail.remaining));
+      }
     };
 
     window.addEventListener("ltr-quota-update", handler);
@@ -48,33 +58,34 @@ function HomeInner() {
   const progress = Math.max(0, Math.min(1, remaining / MAX_ANSWERS));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
-      {/* Topbar */}
-      <header className="border-b border-slate-800 bg-slate-950/70 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
+    <div className="min-h-dvh bg-slate-950 text-slate-50 flex flex-col">
+      {/* ================= HEADER ================= */}
+      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+          {/* Logo + titre */}
           <div className="flex items-center gap-3">
-            {/* ✅ LOGO DREEM (depuis /public/dreem_w.png) */}
-            <div className="relative h-8 w-14 sm:h-9 sm:w-16 overflow-hidden">
+            <div className="relative h-8 w-8 rounded-full bg-slate-900 border border-slate-700 overflow-hidden">
               <Image
                 src="/dreem_w.png"
                 alt="Dreem"
                 fill
+                sizes="32px"
+                className="object-contain p-1"
                 priority
-                className="object-contain"
               />
             </div>
 
             <div>
-              <p className="text-sm uppercase tracking-wide text-slate-300">
-                Conseiller Droit du Travail
+              <p className="text-[11px] uppercase tracking-wide text-slate-300">
+                Conseiller droit du travail
               </p>
               <p className="text-base font-semibold">Agent IA Expert</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-slate-300">
-            <span className="hidden sm:inline">Session sécurisée</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-300 px-3 py-1 text-xs border border-emerald-500/30">
+          {/* Status + mobile infos */}
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-300 px-3 py-1 text-xs border border-emerald-500/30">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               Actif
             </span>
@@ -82,8 +93,6 @@ function HomeInner() {
             <button
               onClick={() => setInfoOpen((v) => !v)}
               className="md:hidden rounded-lg border border-slate-700 px-3 py-1.5 text-xs bg-slate-900"
-              aria-expanded={infoOpen}
-              aria-controls="mobile-info"
             >
               {infoOpen ? "Masquer" : "Infos"}
             </button>
@@ -91,9 +100,9 @@ function HomeInner() {
         </div>
       </header>
 
-      {/* Main layout */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6 grid md:grid-cols-[1.1fr_0.55fr] gap-6">
-        {/* Chat panel */}
+      {/* ================= MAIN ================= */}
+      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6 grid md:grid-cols-[1.1fr_0.55fr] gap-6">
+        {/* ========== CHAT PANEL ========== */}
         <section className="bg-slate-900/40 border border-slate-800 rounded-2xl min-h-[520px] flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
             <div>
@@ -101,10 +110,10 @@ function HomeInner() {
                 Votre conseiller en droit du travail
               </h1>
               <p className="text-sm text-slate-400">
-                Posez vos questions sur le contrat, le licenciement, les heures
-                supplémentaires, les certificats de travail, etc.
+                Contrat, licenciement, heures supplémentaires, certificats, etc.
               </p>
             </div>
+
             <button
               onClick={() => setIsChatOpen((p) => !p)}
               className="text-xs border border-slate-700 hover:border-slate-500 px-3 py-1 rounded-lg bg-slate-900"
@@ -117,38 +126,31 @@ function HomeInner() {
             {isChatOpen ? (
               <App />
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-500 text-sm py-10">
+              <div className="h-full flex items-center justify-center text-slate-500 text-sm">
                 Chat masqué. Cliquez sur “Afficher”.
               </div>
             )}
           </div>
         </section>
 
-        {/* Right panel */}
+        {/* ========== PANEL DROIT ========== */}
         <aside className="space-y-4">
+          {/* Quota */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-100">
-                Quota d’accès
-              </h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-300 border border-slate-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Lien limité
-              </span>
-            </div>
+            <h2 className="text-sm font-semibold text-slate-100">
+              Quota d’accès
+            </h2>
 
-            <p className="text-sm text-slate-400">
-              Ce lien inclut un nombre limité de réponses.
-            </p>
-
-            <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-center">
+            <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-center space-y-3">
               <p className="text-xs uppercase tracking-wide text-slate-400">
                 Réponses restantes
               </p>
 
-              <p className="text-3xl font-mono font-semibold text-slate-50">
+              <p className="text-3xl font-mono font-semibold">
                 {remaining}{" "}
-                <span className="text-slate-500 text-sm">/ {MAX_ANSWERS}</span>
+                <span className="text-slate-500 text-sm">
+                  / {MAX_ANSWERS}
+                </span>
               </p>
 
               <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -159,11 +161,12 @@ function HomeInner() {
               </div>
 
               <p className="text-[11px] text-slate-500">
-                Chaque réponse complète consomme 1 crédit.
+                Chaque réponse consomme 1 crédit.
               </p>
             </div>
           </div>
 
+          {/* Aide */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-3">
             <h2 className="text-sm font-semibold text-slate-100">
               Besoin d’aide ?
@@ -180,26 +183,17 @@ function HomeInner() {
           </div>
         </aside>
 
-        {/* Info panel mobile */}
+        {/* ========== INFOS MOBILE ========== */}
         <section
-          id="mobile-info"
-          className={`md:hidden col-span-1 transition-[max-height,opacity] duration-300 overflow-hidden ${
+          className={`md:hidden transition-[max-height,opacity] duration-300 overflow-hidden ${
             infoOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-3">
-            <p className="text-sm text-slate-400 text-center">
-              Réponses restantes
-            </p>
-            <p className="text-xl font-mono text-center">
+          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-3 text-center">
+            <p className="text-sm text-slate-400">Réponses restantes</p>
+            <p className="text-xl font-mono">
               {remaining} / {MAX_ANSWERS}
             </p>
-            <a
-              href="https://www.dreem.ch/product-page/discutez-avec-un-conseiller-du-travail-ia"
-              className="inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-950 text-sm font-medium px-4 py-2 hover:bg-white/90 transition w-full"
-            >
-              Demander un nouvel accès
-            </a>
           </div>
         </section>
       </main>
@@ -207,11 +201,12 @@ function HomeInner() {
   );
 }
 
+/* ================= WRAPPER ================= */
 export default function HomePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400 text-sm">
+        <div className="min-h-dvh flex items-center justify-center bg-slate-950 text-slate-400 text-sm">
           Initialisation de la session sécurisée…
         </div>
       }
