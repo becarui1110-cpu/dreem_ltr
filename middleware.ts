@@ -2,12 +2,12 @@
 import { NextResponse } from "next/server";
 
 const SECRET = process.env.TOKEN_SECRET!;
-const ADMIN_CODE = process.env.ADMIN_CODE || "dreem2025"; // à mettre dans ton .env
+const ADMIN_CODE = process.env.ADMIN_CODE || "dreem2025";
 const encoder = new TextEncoder();
 
 // Routes spécifiques à ton app "conseiller du droit du travail"
-const EXPIRED_ROUTE = "/expired";               // ou "/acces-expire" si tu crées cette page
-const ADMIN_BASE_ROUTE = "/admin-panel";        // ex: "/admin-droit-travail"
+const EXPIRED_ROUTE = "/expired";
+const ADMIN_BASE_ROUTE = "/admin-panel";
 const ADMIN_LOGIN_ROUTE = `${ADMIN_BASE_ROUTE}/login`;
 
 function toBase64Url(buffer: ArrayBuffer) {
@@ -27,9 +27,7 @@ async function verifyToken(token: string) {
   const expiresAt = Number(tsStr);
 
   // Token expiré ou timestamp invalide
-  if (Number.isNaN(expiresAt) || Date.now() > expiresAt) {
-    return false;
-  }
+  if (Number.isNaN(expiresAt) || Date.now() > expiresAt) return false;
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -49,12 +47,23 @@ export async function middleware(req: Request) {
   const url = new URL(req.url);
   const pathname = url.pathname;
 
-  // 1. Laisser passer la page d'accès expiré (sinon boucle)
+  // 0) Laisser passer les fichiers statiques (images, etc.)
+  //    IMPORTANT: sinon /dreem_w.png est bloqué et redirige vers /expired
+  const isStaticFile =
+    /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml)$/i.test(pathname) ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml";
+
+  if (isStaticFile) {
+    return NextResponse.next();
+  }
+
+  // 1) Laisser passer la page d'accès expiré (sinon boucle)
   if (pathname.startsWith(EXPIRED_ROUTE)) {
     return NextResponse.next();
   }
 
-  // 2. Protéger l'admin du conseiller en droit du travail
+  // 2) Protéger l'admin
   if (pathname.startsWith(ADMIN_BASE_ROUTE)) {
     // laisser passer la page de login admin
     if (pathname.startsWith(ADMIN_LOGIN_ROUTE)) {
@@ -66,9 +75,7 @@ export async function middleware(req: Request) {
       .split(";")
       .map((c) => c.trim());
 
-    const hasValidCookie = cookies.some(
-      (c) => c === `admin_code=${ADMIN_CODE}`
-    );
+    const hasValidCookie = cookies.some((c) => c === `admin_code=${ADMIN_CODE}`);
 
     if (!hasValidCookie) {
       return NextResponse.redirect(new URL(ADMIN_LOGIN_ROUTE, req.url));
@@ -77,17 +84,17 @@ export async function middleware(req: Request) {
     return NextResponse.next();
   }
 
-  // 3. Laisser passer toutes les API (chat IA, génération de lien, etc.)
+  // 3) Laisser passer toutes les API
   if (pathname.startsWith("/api")) {
     return NextResponse.next();
   }
 
-  // 4. Laisser passer les assets Next (build, favicon, etc.)
+  // 4) Laisser passer les assets Next (build, favicon, etc.)
   if (pathname.startsWith("/_next") || pathname === "/favicon.ico") {
     return NextResponse.next();
   }
 
-  // 5. Tout le reste = protégé par un lien temporaire (token)
+  // 5) Tout le reste = protégé par un lien temporaire (token)
   const token = url.searchParams.get("token");
   if (!token) {
     return NextResponse.redirect(new URL(EXPIRED_ROUTE, req.url));
