@@ -1,4 +1,4 @@
-// app/page.tsx
+// app/page.tsx (LTR)
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
@@ -12,7 +12,7 @@ function clampRemaining(n: number) {
 }
 
 function getTokenFromUrl(): string {
-  if (typeof window === "undefined") return "no-window";
+  ifz (typeof window === "undefined") return "no-window";
   const sp = new URLSearchParams(window.location.search);
   return sp.get("token") ?? "no-token";
 }
@@ -22,7 +22,7 @@ function HomeInner() {
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // ✅ Hydrate le compteur dès le chargement (pour éviter le "5" au refresh)
+  // ✅ Hydrate compteur au chargement
   useEffect(() => {
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
@@ -30,7 +30,6 @@ function HomeInner() {
     const raw = window.localStorage.getItem(key);
     const restored = raw == null ? MAX_ANSWERS : clampRemaining(Number(raw));
 
-    // si pas encore init (première visite), on initialise
     if (raw == null) {
       window.localStorage.setItem(key, String(MAX_ANSWERS));
     }
@@ -38,23 +37,16 @@ function HomeInner() {
     setRemaining(restored);
   }, []);
 
-  // 🔄 écouter les mises à jour envoyées par App.tsx (quota)
+  // 🔄 écoute les updates depuis App.tsx
   useEffect(() => {
     const handler: EventListener = (event) => {
       const customEvent = event as CustomEvent<{ remaining: number }>;
-      if (
-        !customEvent.detail ||
-        typeof customEvent.detail.remaining !== "number"
-      ) {
-        return;
-      }
-      setRemaining(customEvent.detail.remaining);
+      const next = customEvent?.detail?.remaining;
+      if (typeof next === "number") setRemaining(clampRemaining(next));
     };
 
     window.addEventListener("ltr-quota-update", handler);
-    return () => {
-      window.removeEventListener("ltr-quota-update", handler);
-    };
+    return () => window.removeEventListener("ltr-quota-update", handler);
   }, []);
 
   const progress = Math.max(0, Math.min(1, remaining / MAX_ANSWERS));
@@ -73,6 +65,7 @@ function HomeInner() {
               <p className="text-base font-semibold">Agent IA Expert</p>
             </div>
           </div>
+
           <div className="flex items-center gap-2 text-sm text-slate-300">
             <span className="hidden sm:inline">Session sécurisée</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-300 px-3 py-1 text-xs border border-emerald-500/30">
@@ -80,7 +73,6 @@ function HomeInner() {
               Actif
             </span>
 
-            {/* bouton infos (mobile) */}
             <button
               onClick={() => setInfoOpen((v) => !v)}
               className="md:hidden rounded-lg border border-slate-700 px-3 py-1.5 text-xs bg-slate-900"
@@ -107,6 +99,7 @@ function HomeInner() {
                 supplémentaires, les certificats de travail, etc.
               </p>
             </div>
+
             <button
               onClick={() => setIsChatOpen((p) => !p)}
               className="text-xs border border-slate-700 hover:border-slate-500 px-3 py-1 rounded-lg bg-slate-900"
@@ -128,7 +121,6 @@ function HomeInner() {
 
         {/* Right panel */}
         <aside className="space-y-4">
-          {/* Widget quota */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-100">
@@ -141,8 +133,7 @@ function HomeInner() {
             </div>
 
             <p className="text-sm text-slate-400">
-              Ce lien inclut un nombre limité de réponses de votre conseiller en
-              droit du travail.
+              Ce lien inclut un nombre limité de réponses.
             </p>
 
             <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-center">
@@ -168,14 +159,12 @@ function HomeInner() {
             </div>
           </div>
 
-          {/* Bloc aide */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-3">
             <h2 className="text-sm font-semibold text-slate-100">
               Besoin d’aide ?
             </h2>
             <p className="text-sm text-slate-400">
-              Si le quota est atteint ou si vous souhaitez prolonger l’accès,
-              retournez sur le site principal pour demander un nouveau lien.
+              Si le quota est atteint, demandez un nouvel accès.
             </p>
             <a
               href="https://ltr.dreem.ch"
@@ -197,9 +186,6 @@ function HomeInner() {
             <h2 className="text-sm font-semibold text-slate-100">
               Infos d’accès
             </h2>
-            <p className="text-sm text-slate-400">
-              Lien à usage limité — chaque réponse consomme un crédit.
-            </p>
             <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-3 space-y-2 text-center">
               <p className="text-[11px] uppercase tracking-wide text-slate-400">
                 Réponses restantes
@@ -215,12 +201,6 @@ function HomeInner() {
                 />
               </div>
             </div>
-            <a
-              href="https://ltr.dreem.ch"
-              className="inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-950 text-sm font-medium px-4 py-2 hover:bg-white/90 transition w-full"
-            >
-              Retourner sur le site
-            </a>
           </div>
         </section>
       </main>
