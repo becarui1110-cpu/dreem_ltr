@@ -23,7 +23,7 @@ function HomeInner() {
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // ✅ Hydrate le compteur dès le chargement (évite le "5" après refresh)
+  // ✅ Hydrate compteur au chargement
   useEffect(() => {
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
@@ -31,19 +31,17 @@ function HomeInner() {
     const raw = window.localStorage.getItem(key);
     const restored = raw == null ? MAX_ANSWERS : clampRemaining(Number(raw));
 
-    if (raw == null) {
-      window.localStorage.setItem(key, String(MAX_ANSWERS));
-    }
-
+    if (raw == null) window.localStorage.setItem(key, String(MAX_ANSWERS));
     setRemaining(restored);
   }, []);
 
-  // 🔄 écouter les mises à jour envoyées par App.tsx (quota)
+  // 🔄 écoute updates depuis App.tsx
   useEffect(() => {
     const handler: EventListener = (event) => {
-      const customEvent = event as CustomEvent<{ remaining: number }>;
-      if (!customEvent.detail || typeof customEvent.detail.remaining !== "number") return;
-      setRemaining(clampRemaining(customEvent.detail.remaining));
+      const e = event as CustomEvent<{ remaining: number }>;
+      if (typeof e.detail?.remaining === "number") {
+        setRemaining(clampRemaining(e.detail.remaining));
+      }
     };
 
     window.addEventListener("ltr-quota-update", handler);
@@ -54,17 +52,19 @@ function HomeInner() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
-      {/* Topbar */}
+      {/* HEADER */}
       <header className="border-b border-slate-800 bg-slate-950/70 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-3">
-            {/* ✅ LOGO DREEM (remplace le rond) */}
-            <div className="h-9 w-9 rounded-full bg-slate-900/60 border border-slate-800 flex items-center justify-center overflow-hidden">
-              <img
+            {/* ✅ Logo Dreem */}
+            <div className="h-9 w-9 rounded-full bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
+              <Image
                 src="/dreem_w.png"
                 alt="Dreem"
-                className="h-5 w-auto object-contain"
-                draggable={false}
+                width={22}
+                height={22}
+                className="object-contain"
+                priority
               />
             </div>
 
@@ -84,7 +84,6 @@ function HomeInner() {
               Actif
             </span>
 
-            {/* bouton infos (mobile) */}
             <button
               onClick={() => setInfoOpen((v) => !v)}
               className="md:hidden rounded-lg border border-slate-700 px-3 py-1.5 text-xs bg-slate-900"
@@ -97,7 +96,7 @@ function HomeInner() {
         </div>
       </header>
 
-      {/* Main layout */}
+      {/* MAIN */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6 grid md:grid-cols-[1.1fr_0.55fr] gap-6">
         {/* Chat panel */}
         <section className="bg-slate-900/40 border border-slate-800 rounded-2xl min-h-[520px] flex flex-col overflow-hidden">
@@ -107,7 +106,7 @@ function HomeInner() {
                 Votre conseiller en droit du travail
               </h1>
               <p className="text-sm text-slate-400">
-                Posez vos questions sur le contrat, le licenciement, les heures supplémentaires, etc.
+                Contrat, licenciement, heures sup, certificats de travail…
               </p>
             </div>
 
@@ -135,7 +134,9 @@ function HomeInner() {
           {/* Widget quota */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-100">Quota d’accès</h2>
+              <h2 className="text-sm font-semibold text-slate-100">
+                Quota d’accès
+              </h2>
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-300 border border-slate-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Lien limité
@@ -143,14 +144,17 @@ function HomeInner() {
             </div>
 
             <p className="text-sm text-slate-400">
-              Ce lien inclut un nombre limité de réponses.
+              Chaque réponse complète consomme 1 crédit.
             </p>
 
             <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-center">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Réponses restantes</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">
+                Réponses restantes
+              </p>
 
               <p className="text-3xl font-mono font-semibold text-slate-50">
-                {remaining} <span className="text-slate-500 text-sm">/ {MAX_ANSWERS}</span>
+                {remaining}{" "}
+                <span className="text-slate-500 text-sm">/ {MAX_ANSWERS}</span>
               </p>
 
               <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -159,19 +163,17 @@ function HomeInner() {
                   style={{ transform: `scaleX(${progress})` }}
                 />
               </div>
-
-              <p className="text-[11px] text-slate-500">Chaque réponse consomme 1 crédit.</p>
             </div>
           </div>
 
-          {/* Bloc aide */}
+          {/* Aide */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-slate-100">Besoin d’aide ?</h2>
+            <h2 className="text-sm font-semibold text-slate-100">
+              Besoin d’aide ?
+            </h2>
             <p className="text-sm text-slate-400">
-              Si le quota est atteint, vous pouvez demander un nouvel accès.
+              Si le quota est atteint, demande un nouvel accès.
             </p>
-
-            {/* ✅ lien Dreem (produit) */}
             <a
               href="https://www.dreem.ch/product-page/discutez-avec-un-conseiller-du-travail-ia"
               className="inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-950 text-sm font-medium px-4 py-2 hover:bg-white/90 transition"
@@ -181,7 +183,7 @@ function HomeInner() {
           </div>
         </aside>
 
-        {/* Info panel mobile */}
+        {/* Mobile infos */}
         <section
           id="mobile-info"
           className={`md:hidden col-span-1 transition-[max-height,opacity] duration-300 overflow-hidden ${
@@ -189,30 +191,12 @@ function HomeInner() {
           }`}
         >
           <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-3">
-            <h2 className="text-sm font-semibold text-slate-100">Infos d’accès</h2>
-            <p className="text-sm text-slate-400">
-              Lien à usage limité — chaque réponse consomme un crédit.
+            <p className="text-sm text-slate-400 text-center">
+              Réponses restantes
             </p>
-
-            <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-3 space-y-2 text-center">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400">Réponses restantes</p>
-              <p className="text-xl font-mono font-semibold text-slate-50">
-                {remaining} <span className="text-slate-500 text-xs">/ {MAX_ANSWERS}</span>
-              </p>
-              <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-emerald-400 transition-all duration-500 origin-left"
-                  style={{ transform: `scaleX(${progress})` }}
-                />
-              </div>
-            </div>
-
-            <a
-              href="https://www.dreem.ch/product-page/discutez-avec-un-conseiller-du-travail-ia"
-              className="inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-950 text-sm font-medium px-4 py-2 hover:bg-white/90 transition w-full"
-            >
-              Demander un nouvel accès
-            </a>
+            <p className="text-xl font-mono text-center">
+              {remaining} / {MAX_ANSWERS}
+            </p>
           </div>
         </section>
       </main>
@@ -225,7 +209,7 @@ export default function HomePage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400 text-sm">
-          Initialisation de la session sécurisée…
+          Initialisation de la session…
         </div>
       }
     >
