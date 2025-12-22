@@ -1,4 +1,4 @@
-// app/App.tsx
+// app/App.tsx (LTR) — quota + blocage saisie (bouton cliquable)
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -19,10 +19,61 @@ function getTokenFromUrl(): string {
   return sp.get("token") ?? "no-token";
 }
 
+function dispatchQuotaUpdate(remaining: number) {
+  window.dispatchEvent(
+    new CustomEvent<{ remaining: number }>("ltr-quota-update", {
+      detail: { remaining },
+    })
+  );
+}
+
+/** ✅ Désactive vraiment la saisie (input/textarea + bouton send) */
+function setChatInputDisabled(disabled: boolean) {
+  const root =
+    document.querySelector<HTMLElement>("[data-chatkit-root]") ??
+    document.querySelector<HTMLElement>("[data-chatkit]") ??
+    document.body;
+
+  const inputs = root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+    "textarea, input[type='text'], input:not([type])"
+  );
+
+  inputs.forEach((el) => {
+    el.disabled = disabled;
+    el.setAttribute("aria-disabled", disabled ? "true" : "false");
+
+    if (disabled) {
+      el.setAttribute(
+        "placeholder",
+        "Quota atteint — un nouvel accès est requis."
+      );
+    }
+  });
+
+  const buttons = root.querySelectorAll<HTMLButtonElement>("button");
+  buttons.forEach((btn) => {
+    const label = (btn.textContent || "").trim().toLowerCase();
+    const aria = (btn.getAttribute("aria-label") || "").trim().toLowerCase();
+
+    const looksLikeSend =
+      label === "send" ||
+      label === "envoyer" ||
+      label.includes("send") ||
+      label.includes("envoy") ||
+      aria.includes("send") ||
+      aria.includes("envoy");
+
+    if (looksLikeSend) {
+      btn.disabled = disabled;
+      btn.setAttribute("aria-disabled", disabled ? "true" : "false");
+    }
+  });
+}
+
 export default function App() {
   const { scheme, setScheme } = useColorScheme();
 
-  const [hydrated, setHydrated] = useState(false); // ✅ quota chargé
+  const [hydrated, setHydrated] = useState(false);
   const [ready, setReady] = useState(false);
 
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
@@ -38,7 +89,7 @@ export default function App() {
     }
   }, []);
 
-  // ✅ 1) Charger quota depuis localStorage AVANT de monter le chat
+  /** ✅ 1) Charger quota avant de monter le chat */
   useEffect(() => {
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
@@ -53,13 +104,7 @@ export default function App() {
 
     setRemaining(restored);
     setBlocked(restored <= 0);
-
-    // sync vers page.tsx
-    window.dispatchEvent(
-      new CustomEvent<{ remaining: number }>("ltr-quota-update", {
-        detail: { remaining: restored },
-      })
-    );
+    dispatchQuotaUpdate(restored);
 
     setHydrated(true);
   }, []);
@@ -70,7 +115,7 @@ export default function App() {
     window.localStorage.setItem(key, String(value));
   }, []);
 
-  // ✅ 2) Decrémenter quota quand réponse finit (avec garde-fous)
+  /** ✅ 2) Décrémenter quota quand réponse finit */
   const handleResponseEnd = useCallback(() => {
     if (!ignoredFirstEndRef.current) {
       ignoredFirstEndRef.current = true; // ignore greeting
@@ -85,25 +130,38 @@ export default function App() {
       const next = Math.max(prev - 1, 0);
 
       persistRemaining(next);
-
-      window.dispatchEvent(
-        new CustomEvent<{ remaining: number }>("ltr-quota-update", {
-          detail: { remaining: next },
-        })
-      );
+      dispatchQuotaUpdate(next);
 
       if (next <= 0) setBlocked(true);
       return next;
     });
   }, [persistRemaining]);
 
-  // ✅ 3) Ready (petit délai UI)
+  /** ✅ 3) Ready */
   useEffect(() => {
     const timer = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(timer);
   }, []);
 
-  // ⛔ Tant que quota pas chargé, on ne monte PAS ChatKitPanel
+  /** ✅ 4) Bloquer réellement la saisie (et rester cliquable) */
+  useEffect(() => {
+    if (!hydrated) return;
+
+    setChatInputDisabled(blocked);
+
+    const root =
+      document.querySelector<HTMLElement>("[data-chatkit-root]") ??
+      document.querySelector<HTMLElement>("[data-chatkit]") ??
+      document.body;
+
+    const obs = new MutationObserver(() => {
+      setChatInputDisabled(blocked);
+    });
+
+    obs.observe(root, { childList: true, subtree: true });
+    return () => obs.disconnect();
+  }, [blocked, hydrated]);
+
   if (!hydrated) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-slate-950/40">
@@ -146,7 +204,7 @@ export default function App() {
               onThemeRequest={setScheme}
             />
 
-            {/* ✅ Bloquer uniquement la saisie, lecture OK */}
+            {/* ✅ Overlay blocage: lecture OK + bouton cliquable */}
             {blocked && (
               <div className="pointer-events-auto absolute inset-x-0 bottom-0">
                 <div className="h-16 bg-gradient-to-t from-slate-950/95 to-transparent" />
@@ -168,8 +226,8 @@ export default function App() {
                   </a>
                 </div>
 
-                {/* couche qui bloque uniquement la zone input */}
-                <div className="absolute inset-x-0 bottom-0 h-28 cursor-not-allowed" />
+                {/* ⚠️ IMPORTANT: aucune couche qui bloque les clics */}
+                {/* Le blocage se fait via disabled sur l’input + bouton send */}
               </div>
             )}
           </>
