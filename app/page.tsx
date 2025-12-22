@@ -1,6 +1,7 @@
 // app/page.tsx (LTR)
 "use client";
 
+import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
 import App from "./App";
 
@@ -17,26 +18,11 @@ function getTokenFromUrl(): string {
   return sp.get("token") ?? "no-token";
 }
 
-function DreemLogo() {
-  return (
-    <div className="h-9 w-9 rounded-full bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
-      <img
-        src="/dreem_w.png"
-        alt="Dreem"
-        width={22}
-        height={22}
-        style={{ objectFit: "contain", display: "block" }}
-      />
-    </div>
-  );
-}
-
 function HomeInner() {
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [remaining, setRemaining] = useState<number>(MAX_ANSWERS);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // Hydrate compteur (anti reset au refresh)
   useEffect(() => {
     const token = getTokenFromUrl();
     const key = `ltr_quota_remaining:${token}`;
@@ -48,13 +34,11 @@ function HomeInner() {
     setRemaining(restored);
   }, []);
 
-  // Écoute les updates quota envoyées par App.tsx
   useEffect(() => {
     const handler: EventListener = (event) => {
-      const e = event as CustomEvent<{ remaining: number }>;
-      if (typeof e.detail?.remaining === "number") {
-        setRemaining(clampRemaining(e.detail.remaining));
-      }
+      const customEvent = event as CustomEvent<{ remaining: number }>;
+      if (typeof customEvent.detail?.remaining !== "number") return;
+      setRemaining(clampRemaining(customEvent.detail.remaining));
     };
 
     window.addEventListener("ltr-quota-update", handler);
@@ -65,11 +49,21 @@ function HomeInner() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
-      {/* HEADER */}
+      {/* Topbar */}
       <header className="border-b border-slate-800 bg-slate-950/70 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-3">
-            <DreemLogo />
+            {/* ✅ LOGO DREEM (depuis /public/dreem_w.png) */}
+            <div className="relative h-8 w-14 sm:h-9 sm:w-16 overflow-hidden">
+              <Image
+                src="/dreem_w.png"
+                alt="Dreem"
+                fill
+                priority
+                className="object-contain"
+              />
+            </div>
+
             <div>
               <p className="text-sm uppercase tracking-wide text-slate-300">
                 Conseiller Droit du Travail
@@ -97,7 +91,7 @@ function HomeInner() {
         </div>
       </header>
 
-      {/* MAIN */}
+      {/* Main layout */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6 grid md:grid-cols-[1.1fr_0.55fr] gap-6">
         {/* Chat panel */}
         <section className="bg-slate-900/40 border border-slate-800 rounded-2xl min-h-[520px] flex flex-col overflow-hidden">
@@ -107,7 +101,8 @@ function HomeInner() {
                 Votre conseiller en droit du travail
               </h1>
               <p className="text-sm text-slate-400">
-                Contrat, licenciement, heures sup., certificats de travail, etc.
+                Posez vos questions sur le contrat, le licenciement, les heures
+                supplémentaires, les certificats de travail, etc.
               </p>
             </div>
             <button
@@ -137,14 +132,20 @@ function HomeInner() {
                 Quota d’accès
               </h2>
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-300 border border-slate-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Lien limité
               </span>
             </div>
+
+            <p className="text-sm text-slate-400">
+              Ce lien inclut un nombre limité de réponses.
+            </p>
 
             <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-center">
               <p className="text-xs uppercase tracking-wide text-slate-400">
                 Réponses restantes
               </p>
+
               <p className="text-3xl font-mono font-semibold text-slate-50">
                 {remaining}{" "}
                 <span className="text-slate-500 text-sm">/ {MAX_ANSWERS}</span>
@@ -179,7 +180,7 @@ function HomeInner() {
           </div>
         </aside>
 
-        {/* Mobile infos */}
+        {/* Info panel mobile */}
         <section
           id="mobile-info"
           className={`md:hidden col-span-1 transition-[max-height,opacity] duration-300 overflow-hidden ${
@@ -211,7 +212,7 @@ export default function HomePage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400 text-sm">
-          Initialisation de la session…
+          Initialisation de la session sécurisée…
         </div>
       }
     >
