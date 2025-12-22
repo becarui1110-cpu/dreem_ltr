@@ -12,7 +12,7 @@ function clampRemaining(n: number) {
 }
 
 function getTokenFromUrl(): string {
-  ifz (typeof window === "undefined") return "no-window";
+  if (typeof window === "undefined") return "no-window";
   const sp = new URLSearchParams(window.location.search);
   return sp.get("token") ?? "no-token";
 }
